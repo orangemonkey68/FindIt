@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "findit",
+  "version": "${version}",
+  "name": "FindIt",
+  "description": "Find any item(s) in nearby inventories!",
+  "authors": [
+    "s0vi"
+  ],
+  "contact": {},
+  "license": "AGPL-3.0",
+  "icon": "assets/FindIt/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "me.s0vi.findit.client.FindItClient"
+    ]
+  },
+  "mixins": [
+    "FindIt.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.12.5",
+    "fabric": "*",
+    "minecraft": "1.17.1"
+  }
+}
