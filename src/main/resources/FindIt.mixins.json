@@ -4,8 +4,10 @@
   "package": "me.s0vi.findit.mixin",
   "compatibilityLevel": "JAVA_16",
   "mixins": [
+
   ],
   "client": [
+    "BlockEntityRenderDispatcherMixin"
   ],
   "injectors": {
     "defaultRequire": 1

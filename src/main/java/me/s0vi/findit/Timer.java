@@ -1,5 +1,9 @@
-package me.s0vi.findit.client;
+package me.s0vi.findit;
 
+/**
+ * A simple single interval timer. This means that calling #start() will reset
+ * the time stored.
+ */
 public class Timer {
     private long startTime = 0;
     private long endTime = 0;

@@ -1,57 +1,90 @@
 package me.s0vi.findit.client.render;
 
-import net.minecraft.client.render.debug.DebugRenderer;
-import net.minecraft.client.world.ClientWorld;
+import me.s0vi.findit.client.FindItClient;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.render.*;
+import net.minecraft.client.render.chunk.BlockBufferBuilderStorage;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Box;
+import net.minecraft.util.math.Matrix3f;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 public class RenderManager {
-    private final Set<BlockPos> blocksToRender = new HashSet<>();
+    private final Map<UUID, BlockSet> blockSets = new HashMap<>();
 
-    private int edgeColor;
-    private int faceColor;
-
-    public RenderManager(int edgeColor, int faceColor) {
-        this.edgeColor = edgeColor;
-        this.faceColor = faceColor;
+    public void renderBlock(MatrixStack matrices, VertexConsumer consumer, BlockPos pos) {
+        MinecraftClient.getInstance().execute(() -> {
+            WorldRenderer.drawBox(matrices, consumer, new Box(pos), 1, 1, 1, 1);
+        });
     }
 
-    public void renderBlock(BlockPos pos, ClientWorld world) {
-        float red = ((edgeColor & 0xFF000000) >> 16) / 255.0F;
-        float green = ((edgeColor & 0x00FF00) >> 8) / 255.0F;
-        float blue = (edgeColor & 0x0000FF) / 255.0F;
-        float alpha = 0.5F;
+    public void renderBlocks(MatrixStack matrixStack, VertexConsumer consumer) {
+        blockSets.forEach((uuid, blockSet) -> {
+            blockSet.blocks().forEach(blockPos -> {
+                FindItClient.LOGGER.info("Rendering outline for block: {}", blockPos.toShortString());
+//                FindItClient.LOGGER.info(matrixStack.toString());
 
-        DebugRenderer.drawBox(pos, 1, red, green, blue, alpha);
+                /*
+                Reason translating by -blockPos worked with injecting into BlockEntityRenderer was because the matrices were translates
+                by blockPos which cancelled them out
+
+                EDIT: it doesn't "cancel it out" as the matrices don't start at the blockPos
+
+                TODO: figure out how to get the matrices where I want them. Maybe WorldRenderer Line1041 is worth a look
+                 */
+
+                VertexConsumer vertexConsumer = MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers().getBuffer(RenderLayer.LINES);
+                matrixStack.push();
+                matrixStack.translate(blockPos.getX() * -1, blockPos.getY() * -1, blockPos.getZ() * -1);
+//                matrixStack.loadIdentity();
+
+                renderBlock(matrixStack, vertexConsumer, blockPos);
+            });
+        });
     }
 
-    public void renderBlocks(ClientWorld world) {
-        blocksToRender.forEach(pos -> renderBlock(pos, world));
+    public boolean containsPos(BlockPos pos) {
+        boolean bool = false;
+
+        for (BlockSet set : blockSets.values()) {
+            bool = set.blocks().contains(pos);
+
+            if (bool) return true;
+        }
+
+        return bool;
     }
 
     public boolean hasBlocksToRender() {
-        return !blocksToRender.isEmpty();
+        return !blockSets.isEmpty();
     }
 
-    public boolean addBlockToRender(BlockPos pos) {
-        return blocksToRender.add(pos);
+    public Set<UUID> getRenderedSearchUuids() {
+        return blockSets.keySet();
     }
 
-    public boolean removeBlockToRender(BlockPos pos) {
-        return blocksToRender.remove(pos);
+    public void addBlockToRender(UUID uuid, BlockPos pos) {
+        blockSets.putIfAbsent(uuid, new BlockSet(new HashSet<>(), new Random().nextInt(0xFFFFFF)));
+        blockSets.get(uuid).blocks().add(pos);
     }
 
-    public void clearBlocksToRender() {
-        blocksToRender.clear();
+    public void removeBlockToRender(UUID uuid, BlockPos pos) {
+        blockSets.get(uuid).blocks().remove(pos);
     }
 
-    public void setEdgeColor(int edgeColor) {
-        this.edgeColor = edgeColor;
+    public void clearBlocksToRender(UUID searchUuid) {
+        blockSets.remove(searchUuid);
     }
 
-    public void setFaceColor(int faceColor) {
-        this.faceColor = faceColor;
+    public void clearAllBlocksToRender() {
+        blockSets.clear();
     }
+
+    public Map<UUID, BlockSet> getBlockSets() {
+        return blockSets;
+    }
+
+    record BlockSet(Set<BlockPos> blocks, int color){}
 }
